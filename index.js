@@ -4,71 +4,45 @@ var Watch = require('./watch');
 
 module.exports = {
 	access: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.access(options.path || options, options.mode ? options.mode : cb, options.mode && cb);
-		});
+		return Asyncplify.fromNode(fs.access, options.path || options, options.mode);
 	},
 	appendFile: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.appendFile(options.path, options.data, options, cb);
-		});
+		return Asyncplify.fromNode(fs.appendFile, options.path, options.data, options);
 	},
 	exists: function (path) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.exists(path, cb);
-		});
+		return Asyncplify.fromNode(fs.exists, path);
 	},
 	lstat: function (path) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.lstat(path, cb);
-		});
+		return Asyncplify.fromNode(fs.lstat, path);
 	},
 	mkdir: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.mkdir(options.path || options, options.mode ? options.mode : cb, options.mode && cb);
-		});
+		return Asyncplify.fromNode(fs.mkdir, options.path || options, options.mode);
 	},
 	readdir: function (path) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.readdir(path, cb);
-		});
+		return Asyncplify.fromNode(fs.readdir, path);
 	},
 	readFile: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.readFile(options.path || options, options, cb);
-		});
+		return Asyncplify.fromNode(fs.readFile, options.path || options, options.encoding);
 	},
 	rename: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.rename(options.oldPath, options.newPath, cb);
-		});
+		return Asyncplify.fromNode(fs.rename, options.oldPath, options.newPath);
 	},
 	rmdir: function (path) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.rmdir(path, cb);
-		});
+		return Asyncplify.fromNode(fs.rmdir, path);
 	},
 	stat: function (path) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.stat(path, cb);
-		});
+		return Asyncplify.fromNode(fs.stat, path);
 	},
 	unlink: function (path) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.unlink(path, cb);
-		});
+		return Asyncplify.fromNode(fs.unlink, path);
 	},
 	utimes: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.utimes(options.path, options.atime, options.mtime, cb);
-		});
+		return Asyncplify.fromNode(fs.utimes, options.path, options.atime, options.mtime);
 	},
 	watch: function (options) {
 		return new Asyncplify(Watch, options);
 	},
 	writeFile: function (options) {
-		return Asyncplify.fromNode(function (cb) {
-			fs.writeFile(options.path, options.data, options, cb);
-		});
+		return Asyncplify.fromNode(fs.writeFile, options.path, options.data, options);
 	}
 };
