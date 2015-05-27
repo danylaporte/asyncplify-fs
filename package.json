@@ -23,6 +23,6 @@
   },
   "homepage": "https://github.com/danylaporte/asyncplify-fs",
   "dependencies": {
-    "asyncplify": "^0.3.5"
+    "asyncplify": "^0.3.10"
   }
 }
