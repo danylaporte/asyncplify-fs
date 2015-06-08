@@ -1,6 +1,5 @@
 var Asyncplify = require('asyncplify');
 var fs = require('fs');
-var Watch = require('./watch');
 
 module.exports = {
 	access: function (options) {
@@ -12,6 +11,9 @@ module.exports = {
 	exists: function (path) {
 		return Asyncplify.fromNode(fs.exists, path);
 	},
+    fromPaged: function (options) {
+        return new Asyncplify(require('./fromPaged'), options);
+    },
 	lstat: function (path) {
 		return Asyncplify.fromNode(fs.lstat, path);
 	},
@@ -40,7 +42,7 @@ module.exports = {
 		return Asyncplify.fromNode(fs.utimes, options.path, options.atime, options.mtime);
 	},
 	watch: function (options) {
-		return new Asyncplify(Watch, options);
+		return new Asyncplify(require('./watch'), options);
 	},
 	writeFile: function (options) {
 		return Asyncplify.fromNode(fs.writeFile, options.path, options.data, options);

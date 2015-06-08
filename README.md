@@ -9,6 +9,37 @@ npm install asyncplify-fs
 
 ## Documentation
 
+### fromPaged(options)
+Asynchronously reads multiple files from disk and returns the items.
+
+options:
+- autoDelete Boolean default = false
+- filenames Array
+
+Example:
+```js
+fs.writeFileSync('page1.json', [1, 2]);
+fs.writeFileSync('page2.json', [3, 4]);
+
+asyncplifyFs
+	.fromPaged(['page1.json', 'page2.json'])
+	.subscribe({
+		emit: function (data) {
+			console.log(data);
+		},
+		end: function (err) {
+			if (err) throw err;
+		}
+	});
+    
+    // 1
+    // 2
+    // 3
+    // 4
+    // end.
+```
+When autoDelete = true, the the files are automatically deleted from the disk once loaded.
+
 ### readFile(options)
 Asynchronously reads the entire contents of a file. 
 
