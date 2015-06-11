@@ -61,6 +61,29 @@ asyncplifyFs
 		}
 	});
 ```
+
+### toPaged(options)
+Asynchronously write a page of items to files on disk and returns the filename.
+The filenames are generated based on temp folder.
+
+options:
+- size Number default = 0
+
+Example:
+```js
+asyncplify
+	.fromArray([0, 1, 2, 3, 4, 5])
+	.pipe(asyncplifyFs.toPaged(2))
+	.subscribe(emit: console.bind(console));
+
+    // /user/temp/1231nnuukkasdppasd
+	// /user/temp/488fdjj31n324nuukd-sspsd
+	// /user/temp/9003403mmfjue003-llhpt
+    // end.
+```
+When the size is not provided, the method will produce a single page containing all items.
+
+
 ### writeFile(options)
 Asynchronously writes data to a file, replacing the file if it already exists. data can be a string or a buffer.
 

@@ -35,6 +35,9 @@ module.exports = {
 	stat: function (path) {
 		return Asyncplify.fromNode(fs.stat, path);
 	},
+	toPaged: function (options) {
+		return require('./toPaged')(options);	
+	},
 	unlink: function (path) {
 		return Asyncplify.fromNode(fs.unlink, path);
 	},
