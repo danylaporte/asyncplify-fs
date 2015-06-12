@@ -4,6 +4,8 @@ var fs = require('fs');
 var states = Asyncplify.states;
 var temp = require('temp');
 
+function noop() { }
+
 function ToPaged(options, on, source) {
 	var self = this;
 
@@ -12,6 +14,7 @@ function ToPaged(options, on, source) {
 	this.items = [];
 	this.on = on;
 	this.options = options;
+	this.beforeSaving = options && options.beforeSaving || noop;
 	this.saving = false;
 	this.source = null;
 	this.sourcePaused = false;
@@ -70,20 +73,28 @@ ToPaged.prototype = {
 		this.source = null;
 		this.do();
 	},
-	pageSaved: function (err) { 
-		if (err) 
+	pageSaved: function (err) {
+		if (err)
 			debug('error saving page %s', err);
 		else
 			debug('page saved');
-			
+
 		this.saving = false;
 		this.error = this.error || err;
 		this.do();
 	},
 	savePage: function () {
 		debug('saving a page of %d items', this.items.length);
-		this.options.filename = temp.path();
-		fs.writeFile(this.options.filename, JSON.stringify(this.items), this.handlePageSaved);
+
+		var args = {
+			filename: temp.path(),
+			items: this.items
+		};
+		
+		this.beforeSaving(args);
+		this.options.filename = args.filename;
+		
+		fs.writeFile(args.filename, JSON.stringify(args.items), this.handlePageSaved);
 		this.saving = true;
 		this.items.length = 0;
 	},
@@ -101,7 +112,11 @@ ToPaged.prototype = {
 
 module.exports = function (options) {
 	return function (source) {
-		var params = { filename: null, size: options && options.size || options || 0 };
+		var params = {
+			beforeSaving: options && options.beforeSaving,
+			filename: null,
+			size: options && options.size || options || 0
+		};
 
 		return new Asyncplify(ToPaged, params, source)
 			.finally(function () {

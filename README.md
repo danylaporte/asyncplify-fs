@@ -67,6 +67,7 @@ Asynchronously write a page of items to files on disk and returns the filename.
 The filenames are generated based on temp folder.
 
 options:
+- beforeSaving Function
 - size Number default = 0
 
 Example:
@@ -81,6 +82,7 @@ asyncplify
 	// /user/temp/9003403mmfjue003-llhpt
     // end.
 ```
+The beforeSaving functions allow to transform the items prior to saving, such as sorting, etc.
 When the size is not provided, the method will produce a single page containing all items.
 
 

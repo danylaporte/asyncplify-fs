@@ -25,5 +25,29 @@ describe('toPaged', function () {
 				}
 			});
     });
+	
+	it('should invoke the beforeSaving function', function (done) {
+		var array = [];
+		var count = 0;
+    
+        asyncplify
+			.fromArray([1, 2, 3, 4, 5])
+			.pipe(asyncplifyFs.toPaged({
+				beforeSaving: function (x) { count++; return x; },
+				size: 2
+			}))
+			.subscribe({
+				emit: array.push.bind(array),
+				end: function (err) {
+					for (var i = 0; i < array.length; i++) {
+						fs.unlinkSync(array[i]);
+					}
+					
+					assert(err === null);
+					count.should.equal(3);
+					done();
+				}
+			});
+    });
     
 })
