@@ -1,112 +1,100 @@
 var Asyncplify = require('asyncplify');
 var debug = require('debug')('asyncplify-fs:toPaged');
 var fs = require('fs');
-var states = Asyncplify.states;
 var temp = require('temp');
 
 function noop() { }
 
-function ToPaged(options, on, source) {
-	var self = this;
-
-	this.error = null;
-	this.handlePageSaved = function (err) { self.pageSaved(err); };
+function ToPaged(options, sink, source) {
 	this.items = [];
-	this.on = on;
-	this.options = options;
 	this.beforeSaving = options && options.beforeSaving || noop;
-	this.saving = false;
+	this.savingQueue = options.savingQueue;
+	this.sink = sink;
+	this.sink.source = this;
+	this.size = options && options.size || 10000;
 	this.source = null;
-	this.sourcePaused = false;
-	this.state = states.RUNNING;
 
-	on.source = this;
 	source._subscribe(this);
 }
 
 ToPaged.prototype = {
-	do: function () {
-		this.doEmit();
-		this.doPendingSave();
-		this.doEnd();
+	close: function () {
+		if (this.source) this.source.close();
+		this.dispose();
+		this.sink = null;
 	},
-	doEmit: function () {
-		var filename = this.options.filename;
-
-		if (filename && !this.saving && this.state === states.RUNNING && !this.error) {
-			this.options.filename = null;
-			debug('emit page');
-			this.on.emit(filename);
-		}
-	},
-	doEnd: function () {
-		if (!this.saving && this.state === states.RUNNING && (this.error || !this.source)) {
-			debug('end');
-			this.state === states.CLOSED;
-			this.on.end(this.error);
-		}
-	},
-	doPendingSave: function () {
-		if (!this.saving && this.items.length && (this.items.length === this.options.size || !this.source) && this.state !== states.CLOSED && !this.error) {
-			this.savePage();
-
-			if (this.source && this.sourcePaused) {
-				this.sourcePaused = false;
-				if (this.state === states.RUNNING) this.source.setState(states.RUNNING);
+	dispose: function () {
+		for (var i = 0; i < this.savingQueue.length; i++) {
+			try {
+				fs.unlinkSync(this.savingQueue[i].filename);
+			} catch (ex) {
 			}
 		}
+
+		this.savingQueue.length = 0;
 	},
 	emit: function (value) {
 		this.items.push(value);
 
-		if (this.items.length === this.options.size && this.items.length) {
-			if (this.saving) {
-				this.sourcePaused = true;
-				this.source.setState(states.PAUSED);
-			} else {
-				this.savePage();
-			}
-		}
+		if (this.items.length === this.size && this.items.length)
+			this.savePage();
 	},
 	end: function (err) {
-		this.error = this.error || err;
 		this.source = null;
-		this.do();
+
+		if (err) {
+			this.dispose();
+			this.items.length = 0;
+		} else if (this.items.length && this.sink) {
+			this.savePage();
+		}
+
+		if (this.sink && (err || !this.savingQueue.length)) {
+			this.sink.end(err);
+			this.sink = null;
+		}
 	},
-	pageSaved: function (err) {
+	pageSaved: function (err, savingItem) {
 		if (err)
 			debug('error saving page %s', err);
 		else
 			debug('page saved');
 
-		this.saving = false;
-		this.error = this.error || err;
-		this.do();
+		savingItem.saved = true;
+
+		if (err || !this.sink) {
+			fs.unlink(savingItem.filename);
+
+			if (this.source) this.source.close();
+			this.source = null;
+
+			if (this.sink) this.sink.end(err);
+			this.sink = null;
+		} else {
+			while (this.savingQueue.length && this.savingQueue[0].saved && this.sink)
+				this.sink.emit(this.savingQueue.shift().filename);
+
+			if (!this.source && !this.savingQueue.length && this.sink) {
+				this.sink.end(null);
+				this.sink = null;
+			}
+		}
 	},
 	savePage: function () {
 		debug('saving a page of %d items', this.items.length);
 
-		var args = {
-			filename: temp.path(),
-			items: this.items
-		};
-		
+		var args = { filename: temp.path(), items: this.items };
+		var self = this;
+		var savingItem = { filename: args.filename, saved: false };
+
 		this.beforeSaving(args);
-		this.options.filename = args.filename;
-		
-		fs.writeFile(args.filename, JSON.stringify(args.items), this.handlePageSaved);
-		this.saving = true;
+		this.savingQueue.push(savingItem);
+
+		fs.writeFile(args.filename, JSON.stringify(args.items), function (err) {
+			self.pageSaved(err, savingItem);
+		});
+
 		this.items.length = 0;
-	},
-	setState: function (state) {
-		if (this.state !== state && this.state !== states.CLOSED) {
-			this.state = state;
-
-			if (this.state === states.RUNNING) this.do();
-
-			if (this.source && state !== states.RUNNING || !this.sourcePaused)
-				this.source.setState(state);
-		}
 	}
 };
 
@@ -114,15 +102,15 @@ module.exports = function (options) {
 	return function (source) {
 		var params = {
 			beforeSaving: options && options.beforeSaving,
-			filename: null,
+			savingQueue: [],
 			size: options && options.size || options || 0
 		};
 
 		return new Asyncplify(ToPaged, params, source)
 			.finally(function () {
-				if (params.filename) {
+				for (var i = 0; i < params.savingQueue.length; i++) {
 					try {
-						fs.unlinkSync(params.filename);
+						fs.unlinkSync(params.savingQueue[i].filename);
 					} catch (ex) {
 					}
 				}
