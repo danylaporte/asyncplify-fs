@@ -8,10 +8,12 @@ function FromPaged(options, sink) {
 	this.autoDelete = options && options.autoDelete;
 	this.filenames = (options && options.filenames || options || []).concat();
 	this.handlePageLoaded = function (err, data) { self.pageLoaded(err, data); };
-	this.pageCount = 0;
+	this.index = 0;
+	this.items = [];
 	this.sink = sink;
 	this.sink.source = this;
-	
+	this.state = Asyncplify.states.RUNNING;
+
 	debug('%d page(s) to load', this.filenames.length);
 
 	if (this.filenames.length)
@@ -21,20 +23,18 @@ function FromPaged(options, sink) {
 }
 
 FromPaged.prototype = {
-	close: function () {
-		this.sink = null;
+	emitItems: function () {
+		while (this.index < this.items.length && this.state === Asyncplify.states.RUNNING) {
+			this.sink.emit(this.items[this.index++]);
+		}
 
-		if (this.autoDelete) {
-            var count = 0;
-			for (var i = 0; i < this.filenames.length; i++) {
-				try {
-					fs.unlinkSync(this.filenames[this.fileIndex]);
-                    count++;
-				} catch (ex) {
-				}
+		if (this.state === Asyncplify.states.RUNNING) {
+			if (this.filenames.length) {
+				this.load();
+			} else {
+				this.state = Asyncplify.states.CLOSED;
+				this.sink.end(null);
 			}
-			this.filenames.length = 0;
-            if (count) debug('delete %d pages.', count);
 		}
 	},
 	load: function () {
@@ -42,24 +42,36 @@ FromPaged.prototype = {
 		fs.readFile(this.filenames[0], this.handlePageLoaded);
 	},
 	pageLoaded: function (err, data) {
+		if (this.state === Asyncplify.states.CLOSED) return;
+
 		var filename = this.filenames.shift();
 
 		if (this.autoDelete && filename) fs.unlink(filename);
-		
-		if (!err && this.sink) {
-            var items = JSON.parse(data);
-            debug('page %d loaded containing %d item(s)', this.count-1, items.length);
 
-			for (var i = 0; i < items.length && this.sink; i++)
-				this.sink.emit(items[i]);
+		if (!err && this.sink) {
+			try {
+				this.items = JSON.parse(data);
+			} catch (ex) {
+				err = ex;
+			}
+
+			if (!err) {
+				this.index = 0;
+				debug('page %d loaded containing %d item(s)', this.count - 1, this.items.length);
+				this.emitItems();
+			}
         }
-		
-		if (err || !this.filenames.length) {
-			var sink = this.sink;
-			this.close();
-			sink.end(err);
-		} else if (this.sink) {
-			this.load();
+
+		if (err) {
+			this.state = Asyncplify.states.CLOSED;
+			this.items.length = 0;
+			this.sink.end(err);
+		}
+	},
+	setState: function (state) {
+		if (this.state !== state && this.state !== Asyncplify.states.CLOSED) {
+			this.state = state;
+			this.emitItems();
 		}
 	}
 };

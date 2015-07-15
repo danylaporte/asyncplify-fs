@@ -18,11 +18,6 @@ function ToPaged(options, sink, source) {
 }
 
 ToPaged.prototype = {
-	close: function () {
-		if (this.source) this.source.close();
-		this.dispose();
-		this.sink = null;
-	},
 	dispose: function () {
 		for (var i = 0; i < this.savingQueue.length; i++) {
 			try {
@@ -65,7 +60,7 @@ ToPaged.prototype = {
 		if (err || !this.sink) {
 			fs.unlink(savingItem.filename);
 
-			if (this.source) this.source.close();
+			if (this.source) this.source.setState(Asyncplify.states.CLOSED);
 			this.source = null;
 
 			if (this.sink) this.sink.end(err);
@@ -95,6 +90,10 @@ ToPaged.prototype = {
 		});
 
 		this.items.length = 0;
+	},
+	setState: function (state) {
+		if (this.source) this.source.setState(state);
+		if (state === Asyncplify.states.CLOSED) this.dispose();
 	}
 };
 
