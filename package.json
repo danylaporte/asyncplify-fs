@@ -1,6 +1,6 @@
 {
   "name": "asyncplify-fs",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "asyncplify wrappers around some of the node fs lib",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/danylaporte/asyncplify-fs",
   "dependencies": {
-    "asyncplify": "^0.5.4",
+    "asyncplify": "^0.5.8",
     "debug": "^2.2.0",
     "temp": "^0.8.3"
   },
